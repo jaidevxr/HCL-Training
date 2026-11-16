@@ -142,7 +142,39 @@ app.post('/tasks', async (req, res) => {
 });
 
 // ============================================
-// 3. DELETE A TASK
+// 3. UPDATE A TASK (Edit title or toggle done)
+// ============================================
+app.put('/tasks/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { title, done } = req.body;
+
+  if (isDbConnected) {
+    try {
+      if (title !== undefined && done !== undefined) {
+        await queryDb('UPDATE tasks SET title = ?, done = ? WHERE id = ?', [title, done, id]);
+      } else if (title !== undefined) {
+        await queryDb('UPDATE tasks SET title = ? WHERE id = ?', [title, id]);
+      } else if (done !== undefined) {
+        await queryDb('UPDATE tasks SET done = ? WHERE id = ?', [done, id]);
+      }
+      return res.json({ id, title, done, message: 'Task updated successfully' });
+    } catch (err) {
+      console.error('Error updating task in DB:', err.message);
+    }
+  }
+
+  // Fallback in-memory update
+  const task = fallbackTasks.find(t => t.id === id);
+  if (task) {
+    if (title !== undefined) task.title = title;
+    if (done !== undefined) task.done = Boolean(done);
+    return res.json(task);
+  }
+  res.status(404).json({ message: 'Task not found' });
+});
+
+// ============================================
+// 4. DELETE A TASK
 // ============================================
 app.delete('/tasks/:id', async (req, res) => {
   const id = parseInt(req.params.id);
